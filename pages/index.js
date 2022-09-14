@@ -75,6 +75,7 @@ export default class Home extends Component{
         "https://thentic-api-backend.herokuapp.com/mint/", jsonInfo
       )
       console.log(thenticResponse);
+      window.location.replace(thenticResponse.data.transaction_url)
     } catch (err) {
       console.error(err);
     }
