@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
-import { Container } from 'react-bootstrap';
+import { Container, ListGroup, Button } from 'react-bootstrap';
 import { create } from 'ipfs-http-client';
 import axios from 'axios';
 
@@ -27,10 +27,25 @@ export default class Home extends Component{
     this.state = {
       name: "",
       file: "",
-      image: ""
+      image: "",
+      nfts: [],
+      address: ""
     }
     this.handleImageChange = this.handleImageChange.bind(this);
     this.upload = this.upload.bind(this);
+  }
+
+  componentDidMount() {
+    axios.get(
+      "https://thentic-api-backend.herokuapp.com/view/"
+    ).then((res) => {
+      if(res.status === 200) {
+        console.log(res.data.nfts);
+        this.setState({
+          nfts: res.data.nfts
+        })
+      }
+    })
   }
 
   handleImageChange(e) {
@@ -41,13 +56,19 @@ export default class Home extends Component{
     })
   }
 
+  handleAddressChange(e) {
+    this.setState({
+      address: e.target.value
+    })
+  }
+
   async upload(e) {
     e.preventDefault();
     try {
       const res = await client.add(this.state.file);
-      const url = `https://ipfs.infura.io/ipfs/${res.path}`;
+      const url = `https://${res.cid.toV1().toString()}.ipfs.dweb.link/`;    
       this.setState({image: url});
-      const jsonInfo = {"name" : this.state.name, "image" : url, "redirectUri": window.location.href}
+      const jsonInfo = {"name" : this.state.name, "image" : url, "redirectUri": window.location.href, "address": this.state.address}
       console.log(jsonInfo)
       console.log("Uploaded!");
       const thenticResponse = await axios.post(
@@ -62,14 +83,39 @@ export default class Home extends Component{
   render() {
     return (
       <>
-        <div style={{textAlign: "center"}}>
-          <h1>Convert your memories into NFTs</h1>
-        </div>
-        <Container>
-          <InputGroup controlId="formFile" className="mb-3">
+        <Container style={{marginTop: "3rem"}}>
+
+          <div style={{textAlign: "center", marginBottom: "2rem"}}>
+            <h1>Convert your memories into NFTs</h1>
+          </div>
+
+          <div style={{margin: "2rem" }}>
+            <ListGroup>
+              { 
+                this.state.nfts.map(
+                  element => (
+                    <ListGroup.Item key={element.id} variant="success">
+                      ChainId: {element.chain_id} &nbsp;
+                      Contract: {element.contract} &nbsp;
+                      NFT ID: {element.id} &nbsp;
+                      Link: {<a href={""+JSON.parse(element.data).image}>Click here</a>} 
+                    </ListGroup.Item>
+                  )
+                )
+              }
+            </ListGroup>
+          </div>
+          
+          <InputGroup className="mb-3">
             <Form.Control type="file" accept='image/*' onChange={(e) => this.handleImageChange(e)} />
-            <InputGroup.Text variant="button" style={{cursor: "pointer"}} onClick={(e) => this.upload(e)}>Upload</InputGroup.Text>{' '}
           </InputGroup>
+          <InputGroup className="mb-3">
+            <InputGroup.Text variant="label">Address</InputGroup.Text>
+            <Form.Control type="text" value={this.state.address} onChange={(e) => this.handleAddressChange(e)} />
+          </InputGroup>
+          <div style={{ textAlign: "center"}}>
+            <Button type="button" variant="primary" onClick={(e) => this.upload(e)}>Mint!</Button>
+          </div>
         </Container>
         
       </>
